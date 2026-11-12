@@ -1,0 +1,30 @@
+version: 2
+
+models:
+  - name: mart_ventas_mensuales
+    description: Ventas por mes y categoria (sin pedidos cancelados ni no disponibles).
+    columns:
+      - name: anio_mes
+        data_tests: [not_null]
+      - name: ventas
+        description: Suma del precio de los productos, sin flete (en reales, BRL).
+
+  - name: mart_entregas_por_estado
+    description: Plazo de entrega y nota media por estado del cliente, a tiempo frente a tarde.
+    columns:
+      - name: estado
+        data_tests: [unique, not_null]
+
+exposures:
+  - name: dashboard_ecommerce
+    label: Dashboard de ventas y entregas
+    type: dashboard
+    maturity: medium
+    url: http://localhost:8501
+    description: Dashboard en Streamlit (app/dashboard.py) sobre los marts.
+    depends_on:
+      - ref('mart_ventas_mensuales')
+      - ref('mart_entregas_por_estado')
+      - ref('fct_pedidos')
+    owner:
+      name: Data Engineering

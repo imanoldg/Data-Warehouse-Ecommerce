@@ -1,0 +1,11 @@
+version: 2
+
+models:
+  - name: int_pedidos__items_agregados
+    columns:
+      - name: pedido_id
+        data_tests: [unique, not_null]
+  - name: int_pedidos__pagos_agregados
+    columns:
+      - name: pedido_id
+        data_tests: [unique, not_null]

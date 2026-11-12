@@ -1,0 +1,22 @@
+# Datos: el dataset de Olist tiene licencia CC BY-NC-SA y no se redistribuye aqui.
+# El warehouse y la muestra se regeneran con los scripts.
+data/
+
+# dbt
+dbt/target/
+dbt/logs/
+dbt/dbt_packages/
+dbt/.user.yml
+logs/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+
+# Streamlit
+.streamlit/secrets.toml
+site/

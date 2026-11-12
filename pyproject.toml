@@ -1,0 +1,18 @@
+[project]
+name = "dwh-ecommerce-dbt"
+version = "0.1.0"
+description = "Data warehouse en modelo estrella con dbt y DuckDB sobre el dataset de Olist"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["consultas", "generar_muestra", "simular_cambios"]

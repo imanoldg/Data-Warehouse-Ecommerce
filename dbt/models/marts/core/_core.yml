@@ -1,0 +1,188 @@
+version: 2
+
+models:
+  - name: dim_fechas
+    description: Calendario, un dia por fila (2016-2018).
+    columns:
+      - name: fecha
+        data_tests: [unique, not_null]
+
+  - name: dim_clientes
+    description: Un cliente real por fila (customer_unique_id).
+    columns:
+      - name: cliente_sk
+        data_tests: [unique, not_null]
+      - name: cliente_unico_id
+        data_tests: [unique, not_null]
+      - name: es_recurrente
+        description: Ha hecho mas de un pedido.
+
+  - name: dim_productos
+    columns:
+      - name: producto_id
+        data_tests: [unique, not_null]
+      - name: categoria_en
+        description: Categoria en ingles; si no hay traduccion, en portugues.
+        data_tests: [not_null]
+
+  - name: dim_vendedores
+    description: >-
+      Vendedores con historico (SCD tipo 2): una fila por version. Para el estado actual,
+      filtra por es_actual.
+    columns:
+      - name: vendedor_sk
+        description: Clave de la version (cambia si el vendedor cambia de sede).
+        data_tests: [unique, not_null]
+      - name: vendedor_id
+        data_tests: [not_null]
+      - name: valido_desde
+        description: Inicio de la version. La primera version vale desde 1900-01-01.
+      - name: valido_hasta
+        description: Fin de la version. La version actual tiene 9999-12-31.
+      - name: es_actual
+        data_tests: [not_null]
+
+  - name: fct_items_pedido
+    description: Una fila por linea de pedido.
+    columns:
+      - name: item_sk
+        data_tests: [unique, not_null]
+      - name: cliente_sk
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_clientes')
+                field: cliente_sk
+      - name: producto_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_productos')
+                field: producto_id
+      - name: vendedor_sk
+        description: La version del vendedor vigente cuando se hizo la compra.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_vendedores')
+                field: vendedor_sk
+      - name: fecha_compra
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_fechas')
+                field: fecha
+
+  - name: fct_pedidos
+    description: Una fila por pedido, con importes, pago, resena y entrega.
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: pedido_id
+        data_type: varchar
+        constraints: [{ type: not_null }]
+        data_tests: [unique]
+      - name: cliente_sk
+        data_type: varchar
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_clientes')
+                field: cliente_sk
+      - name: fecha_compra
+        data_type: date
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_fechas')
+                field: fecha
+      - name: estado
+        data_type: varchar
+      - name: num_items
+        data_type: integer
+      - name: valor_productos
+        data_type: decimal(12, 2)
+      - name: valor_flete
+        data_type: decimal(12, 2)
+      - name: importe_total
+        data_type: decimal(12, 2)
+        description: Productos + flete, segun las lineas del pedido.
+      - name: importe_pagado
+        data_type: decimal(12, 2)
+        description: Suma de todos los pagos del pedido.
+      - name: tipo_pago_principal
+        data_type: varchar
+      - name: cuotas_max
+        data_type: integer
+      - name: nota_resena
+        data_type: integer
+        description: Nota de 1 a 5 de la resena mas reciente (nula si no hay resena).
+      - name: es_entregado
+        data_type: boolean
+        description: Estado "delivered" y con fecha de entrega.
+      - name: dias_hasta_entrega
+        data_type: integer
+      - name: dias_retraso
+        data_type: integer
+        description: Dias de retraso sobre la fecha estimada (0 si llego a tiempo).
+      - name: entregado_a_tiempo
+        data_type: boolean
+        description: Nulo si el pedido no se ha entregado.
+
+unit_tests:
+  - name: test_fct_pedidos_calcula_la_entrega
+    description: Puntual, con retraso y "delivered" sin fecha de entrega (no cuenta como entregado).
+    model: fct_pedidos
+    given:
+      - input: ref('stg_olist__pedidos')
+        rows:
+          - pedido_id: a_tiempo
+            cliente_id: c1
+            estado: delivered
+            comprado_en: "2018-01-01 10:00:00"
+            entregado_en: "2018-01-08 10:00:00"
+            fecha_estimada_entrega: "2018-01-10"
+          - pedido_id: tarde
+            cliente_id: c1
+            estado: delivered
+            comprado_en: "2018-01-01 10:00:00"
+            entregado_en: "2018-01-15 10:00:00"
+            fecha_estimada_entrega: "2018-01-10"
+          - pedido_id: sin_fecha
+            cliente_id: c1
+            estado: delivered
+            comprado_en: "2018-01-01 10:00:00"
+            entregado_en: null
+            fecha_estimada_entrega: "2018-01-10"
+      - input: ref('stg_olist__clientes')
+        rows:
+          - { cliente_id: c1, cliente_unico_id: u1 }
+      - input: ref('int_pedidos__items_agregados')
+        rows: []
+      - input: ref('int_pedidos__pagos_agregados')
+        rows: []
+      - input: ref('stg_olist__resenas')
+        rows: []
+    expect:
+      rows:
+        - { pedido_id: a_tiempo, es_entregado: true, dias_hasta_entrega: 7, dias_retraso: 0, entregado_a_tiempo: true }
+        - { pedido_id: tarde, es_entregado: true, dias_hasta_entrega: 14, dias_retraso: 5, entregado_a_tiempo: false }
+        - { pedido_id: sin_fecha, es_entregado: false, dias_hasta_entrega: null, dias_retraso: null, entregado_a_tiempo: null }
+
+  - name: test_dim_vendedores_primera_version_vale_desde_siempre
+    description: >-
+      La primera version de un vendedor vale desde 1900 (para los pedidos antiguos); las
+      siguientes, desde que se detecto el cambio.
+    model: dim_vendedores
+    given:
+      - input: ref('snap_vendedores')
+        rows:
+          - { dbt_scd_id: v1a, vendedor_id: v1, ciudad: sao paulo, valido_desde: "2026-01-01 00:00:00", valido_hasta: "2026-03-01 00:00:00" }
+          - { dbt_scd_id: v1b, vendedor_id: v1, ciudad: curitiba, valido_desde: "2026-03-01 00:00:00", valido_hasta: "9999-12-31 00:00:00" }
+    expect:
+      rows:
+        - { vendedor_sk: v1a, ciudad: sao paulo, valido_desde: "1900-01-01 00:00:00", es_actual: false }
+        - { vendedor_sk: v1b, ciudad: curitiba, valido_desde: "2026-03-01 00:00:00", es_actual: true }

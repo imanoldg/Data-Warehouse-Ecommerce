@@ -1,0 +1,15 @@
+snapshots:
+  - name: snap_vendedores
+    description: >-
+      Historico de vendedores (SCD tipo 2). Cada "dbt snapshot" compara la sede actual de
+      cada vendedor con la ultima guardada; si cambia, cierra la version antigua y abre otra.
+    relation: ref('stg_olist__vendedores')
+    config:
+      schema: snapshots
+      unique_key: vendedor_id
+      strategy: check
+      check_cols: [codigo_postal, ciudad, estado]
+      dbt_valid_to_current: "cast('9999-12-31' as timestamp)"
+      snapshot_meta_column_names:
+        dbt_valid_from: valido_desde
+        dbt_valid_to: valido_hasta

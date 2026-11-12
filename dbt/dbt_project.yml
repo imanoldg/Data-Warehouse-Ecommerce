@@ -1,0 +1,26 @@
+name: dwh_ecommerce
+version: "1.0.0"
+profile: dwh_ecommerce
+
+model-paths: ["models"]
+snapshot-paths: ["snapshots"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+
+models:
+  dwh_ecommerce:
+    staging:
+      # Tablas y no vistas: una vista sobre read_csv() guarda la ruta RELATIVA de los CSV y
+      # falla si se consulta desde otra carpeta (p. ej. el dashboard). Como tablas, el
+      # fichero warehouse.duckdb queda autocontenido.
+      +materialized: table
+      +schema: staging
+    intermediate:
+      +materialized: view
+      +schema: intermediate
+    marts:
+      +materialized: table
+      core:
+        +schema: core
+      informes:
+        +schema: informes

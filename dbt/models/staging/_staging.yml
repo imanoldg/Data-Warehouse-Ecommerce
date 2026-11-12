@@ -1,0 +1,71 @@
+version: 2
+
+models:
+  - name: stg_olist__pedidos
+    columns:
+      - name: pedido_id
+        data_tests: [unique, not_null]
+      - name: cliente_id
+        data_tests: [not_null]
+      - name: estado
+        data_tests:
+          - accepted_values:
+              arguments:
+                values:
+                  [delivered, shipped, canceled, unavailable, invoiced, processing, created, approved]
+      - name: comprado_en
+        data_tests: [not_null]
+
+  - name: stg_olist__items_pedido
+    columns:
+      - name: pedido_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_olist__pedidos')
+                field: pedido_id
+      - name: precio
+        data_tests: [not_null]
+
+  - name: stg_olist__pagos
+    columns:
+      - name: tipo_pago
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [credit_card, boleto, voucher, debit_card, not_defined]
+
+  - name: stg_olist__resenas
+    description: Una fila por pedido (la resena mas reciente).
+    columns:
+      - name: pedido_id
+        data_tests: [unique, not_null]
+      - name: nota
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4, 5]
+                quote: false
+
+  - name: stg_olist__clientes
+    columns:
+      - name: cliente_id
+        data_tests: [unique, not_null]
+      - name: cliente_unico_id
+        data_tests: [not_null]
+
+  - name: stg_olist__productos
+    columns:
+      - name: producto_id
+        data_tests: [unique, not_null]
+
+  - name: stg_olist__categorias
+    columns:
+      - name: categoria
+        data_tests: [unique, not_null]
+
+  - name: stg_olist__vendedores
+    columns:
+      - name: vendedor_id
+        data_tests: [unique, not_null]

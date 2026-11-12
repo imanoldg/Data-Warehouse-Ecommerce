@@ -1,0 +1,33 @@
+version: 2
+
+# DuckDB lee los CSV directamente. Todo se lee como texto (all_varchar) y los tipos se
+# fijan a mano en staging: asi un CSV con un valor raro no cambia el tipo de una columna.
+# La carpeta de los CSV se elige con la variable de entorno OLIST_DIR.
+sources:
+  - name: olist
+    description: Dataset publico de Olist (e-commerce de Brasil, 2016-2018), en CSV.
+    config:
+      meta:
+        external_location: >-
+          read_csv('{{ env_var("OLIST_DIR", "../data/olist") }}/{name}.csv',
+          header = true, all_varchar = true)
+    tables:
+      - name: olist_orders_dataset
+        description: Un pedido por fila.
+      - name: olist_order_items_dataset
+        description: Una linea por producto de cada pedido.
+      - name: olist_order_payments_dataset
+        description: Pagos; un pedido puede tener varias lineas (p. ej. voucher + tarjeta).
+      - name: olist_order_reviews_dataset
+        description: >-
+          Resenas. Ojo: un review_id puede aparecer en varios pedidos, y un pedido puede
+          tener varias resenas.
+      - name: olist_customers_dataset
+        description: >-
+          Clientes. customer_id cambia en cada pedido; el cliente real es customer_unique_id.
+      - name: olist_products_dataset
+        description: Productos. Las columnas "lenght" tienen la errata del dataset original.
+      - name: olist_sellers_dataset
+        description: Vendedores. Se historifica con un snapshot (SCD tipo 2).
+      - name: product_category_name_translation
+        description: Traduccion de categorias al ingles. Faltan algunas.
